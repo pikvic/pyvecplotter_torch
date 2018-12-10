@@ -2,6 +2,12 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 
+# TODO flatten windows (refactor Dataset)
+# TODO allocate all data on device
+# TODO calculate memory consumption
+# TODO make bigger batches
+# TODO refactor functions
+# TODO make zeros ssim_matrix vector and write batched results there
 
 class PairsDataset(Dataset):
    
@@ -30,7 +36,7 @@ class PairsDataset(Dataset):
         win1 = self.area1[beg:end, beg:end]
         
         win2 = self.area2[i:i+self.window_size, j:j+self.window_size]
-        
+
         return (torch.from_numpy(win1.reshape(1, self.window_size, self.window_size)), torch.from_numpy(win2.reshape(1, self.window_size, self.window_size)))
 
 
