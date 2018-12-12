@@ -58,7 +58,7 @@ def ssim(x, y):
     return (tC * tE * tS).squeeze(-1)
 
 def ssim_matrix(area1, area2, search_radius, window_radius):
-    batch_size = 2
+    batch_size = 200
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     dataset = PairsDataset(area1, area2, search_radius, window_radius)
