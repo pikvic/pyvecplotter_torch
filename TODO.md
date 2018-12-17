@@ -20,3 +20,11 @@
 * [ ] calculate dt
 * [ ] calculate pix_size_km
 * [ ] write vectors to files (right and filtered ones)
+
+## Benchmark
+
+* [ ] make notebook for benchmark
+* [ ] generate set of params for benchmark
+* [ ] define functions for calling legacy and pyvecplotter with params
+* [ ] collect times of execution and plot them
+* [ ] define function for comparing vectors (using legacy strategy of windows)
