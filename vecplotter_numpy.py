@@ -90,6 +90,5 @@ def run_algorithm(data1, data2, config):
         vector = process_point(data1, data2, x0, y0, search_radius_x, window_radius_x)
         vectors.append(vector)
 
-    for vector in vectors:
-        print(vector)
+    return vectors
     
