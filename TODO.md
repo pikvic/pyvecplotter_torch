@@ -28,3 +28,10 @@
 * [ ] define functions for calling legacy and pyvecplotter with params
 * [ ] collect times of execution and plot them
 * [ ] define function for comparing vectors (using legacy strategy of windows)
+
+## Presentation
+
+* [ ] slides for problem definition
+* [ ] slides for implementation details (from loops to tensors)
+* [ ] slides for benchmark
+* [ ] slides for future improvements suggestions
