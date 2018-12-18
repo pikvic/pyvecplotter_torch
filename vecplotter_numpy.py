@@ -15,37 +15,40 @@ def ssim(x, y):
     ssim = C * E * S
     return ssim
 
-def ssim_matrix(area1, area2, search_radius, window_radius):
+def ssim_matrix(area1, area2, search_radius_x, search_radius_y, window_radius_x, window_radius_y):
 
-    ssim_size = search_radius*2 - window_radius*2 + 1
-    window_size = window_radius*2+1
-    padding = search_radius - window_radius
+    ssim_size_x = search_radius_x * 2 - window_radius_x * 2 + 1
+    ssim_size_y = search_radius_y * 2 - window_radius_y * 2 + 1
+    window_size_x = window_radius_x * 2 + 1
+    window_size_y = window_radius_y * 2 + 1
+    padding_x = search_radius_x - window_radius_x
+    padding_y = search_radius_y - window_radius_y
     
-    ssim_matrix = np.zeros((ssim_size, ssim_size))
-    win1 = area1[padding : padding + window_size, padding : padding + window_size]
+    ssim_matrix = np.zeros((ssim_size_y, ssim_size_x))
+    win1 = area1[padding_y : padding_y + window_size_y, padding_x : padding_x + window_size_x]
     
-    for y in range(ssim_size):
-        for x in range(ssim_size):
-            win2 = area2[0+y:window_size+y, 0+x:window_size+x]
+    for y in range(ssim_size_y):
+        for x in range(ssim_size_x):
+            win2 = area2[0 + y : window_size_y + y, 0 + x : window_size_x + x]
             ssim_matrix[y, x] = ssim(win1, win2)
       
     return ssim_matrix
 
-def process_point(data1, data2, x0, y0, search_radius, window_radius):
+def process_point(data1, data2, x0, y0, search_radius_x, search_radius_y, window_radius_x, window_radius_y):
 
-    area1 = data1[y0-search_radius:y0+search_radius+1, x0-search_radius:x0+search_radius+1]
-    area2 = data2[y0-search_radius:y0+search_radius+1, x0-search_radius:x0+search_radius+1]
+    area1 = data1[y0 - search_radius_y:y0 + search_radius_y + 1, x0 - search_radius_x:x0 + search_radius_x + 1]
+    area2 = data2[y0 - search_radius_y:y0 + search_radius_y + 1, x0 - search_radius_x:x0 + search_radius_x + 1]
 
-    ssim12 = ssim_matrix(area1, area2, search_radius, window_radius)
-    ssim11 = ssim_matrix(area1, area1, search_radius, window_radius)
+    ssim12 = ssim_matrix(area1, area2, search_radius_x, search_radius_y, window_radius_x, window_radius_y)
+    ssim11 = ssim_matrix(area1, area1, search_radius_x, search_radius_y, window_radius_x, window_radius_y)
 
     ssim_max = np.max(ssim12)
     i, j = np.unravel_index(ssim12.argmax(), ssim12.shape) 
-    y1 = y0 - search_radius + window_radius + i
-    x1 = x0 - search_radius + window_radius + j
+    y1 = y0 - search_radius_y + window_radius_y + i
+    x1 = x0 - search_radius_x + window_radius_x + j
 
-    area2 = data2[y1-search_radius:y1+search_radius+1, x1-search_radius:x1+search_radius+1]
-    ssim22 = ssim_matrix(area2, area2, search_radius, window_radius)
+    area2 = data2[y1 - search_radius_y:y1 + search_radius_y + 1, x1 - search_radius_x:x1 + search_radius_x + 1]
+    ssim22 = ssim_matrix(area2, area2, search_radius_x, search_radius_y, window_radius_x, window_radius_y)
 
     id1_max = np.argwhere(ssim11 == np.max(ssim11))
     id2_max = np.argwhere(ssim22 == np.max(ssim22))
@@ -87,7 +90,7 @@ def run_algorithm(data1, data2, config):
 
     for point_num, (x0, y0) in enumerate(points):
         print(f'Processing point  {point_num+1}/{len(points)} : ({x0}, {y0})...')
-        vector = process_point(data1, data2, x0, y0, search_radius_x, window_radius_x)
+        vector = process_point(data1, data2, x0, y0, search_radius_x, search_radius_y, window_radius_x, window_radius_y)
         vectors.append(vector)
 
     return vectors

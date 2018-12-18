@@ -1,3 +1,5 @@
+import numpy as np
+
 # Расчёт SSIM_LAB34
 def lab34_ssim(x, y):
     x_mean = np.mean(x)
@@ -15,7 +17,7 @@ def lab34_ssim(x, y):
     return ssim
 
 
-def calc_ssim_matrix_legacy(data1, data2, x0, y0, sa_cx, sa_cy, rw_cx, rw_cy):
+def ssim_matrix(data1, data2, x0, y0, sa_cx, sa_cy, rw_cx, rw_cy):
     
     sa_left = x0 - sa_cx//2
     sa_right = x0 + sa_cx//2 - rw_cx
@@ -40,108 +42,99 @@ def calc_ssim_matrix_legacy(data1, data2, x0, y0, sa_cx, sa_cy, rw_cx, rw_cy):
     
     return ssim_matrix
 
+def process_point(data1, data2, x0, y0, sa_cx, sa_cy, rw_cx, rw_cy):
+        
+    ssim12 = ssim_matrix(data1, data2, x0, y0, sa_cx, sa_cy, rw_cx, rw_cy)
+    ssim11 = ssim_matrix(data1, data1, x0, y0, sa_cx, sa_cy, rw_cx, rw_cy)
 
-
-# Параметры алгоритма, как в конфиге
-sa_cx = 11
-sa_cy = 13
-rw_cx = 3
-rw_cy = 4
-ssim_thr = 0.8
-assim_thr = 0.05
-v_thr = 1.9
-C_pow = 1
-E_pow = 1
-S_pow = 1
-
-left = 600
-top = 500
-step = 10
-nx = 1
-ny = 1
-
-# Легаси алгоритм
-
-vectors = []
-
-for p in points:
-    x0 = p[0]
-    y0 = p[1]
-    
-    ssim12 = calc_ssim_matrix_legacy(data1, data2, x0, y0, sa_cx, sa_cy, rw_cx, rw_cy)
-    
-    ssim_max = ssim12.max()
-       
     sa_left = x0 - sa_cx//2
     sa_right = x0 + sa_cx//2 - rw_cx
     sa_top = y0 - sa_cy//2
     sa_bottom = y0 + sa_cy//2 - rw_cy    
     
+    ssim_max = np.max(ssim12)
     i, j = np.unravel_index(ssim12.argmax(), ssim12.shape) 
     
     y1 = sa_top + i + rw_cy//2
     x1 = sa_left + j + rw_cx//2
-    
-    ssim11 = calc_ssim_matrix_legacy(data1, data1, x0, y0, sa_cx, sa_cy, rw_cx, rw_cy)
-    ssim22 = calc_ssim_matrix_legacy(data2, data2, x1, y1, sa_cx, sa_cy, rw_cx, rw_cy)
-    
-    a = np.argwhere(ssim11 == 1.0)
-    b = np.argwhere(ssim11 > ssim_max)
-    r1 = np.sqrt(np.sum((a-b)**2, axis=1))
-    r1 = np.max(r1)
-    
-    
-    a = np.argwhere(ssim11 == 1.0)
-    b = np.argwhere(ssim11 > ssim_max)
-    r2 = np.sqrt(np.sum((a-b)**2, axis=1))
-    r2 = np.max(r2)
 
+    ssim22 = ssim_matrix(data2, data2, x1, y1, sa_cx, sa_cy, rw_cx, rw_cy)
+
+    id1_max = np.argwhere(ssim11 == np.max(ssim11))
+    id2_max = np.argwhere(ssim22 == np.max(ssim22))
+    id1 = np.argwhere(ssim11 > ssim_max)
+    id2 = np.argwhere(ssim22 > ssim_max)
+    r1 = np.max(np.sqrt(np.einsum('ij,ij->i', id1 - id1_max, id1-id1_max)))
+    r2 = np.max(np.sqrt(np.einsum('ij,ij->i', id2 - id2_max, id2-id2_max)))
+ 
     r_max = max(r1, r2)
+    #assim = pix_size_km * r_max * 1000 / dt
+    #v = pix_size_km * np.sqrt(np.power(x1 - x0, 2) + np.power(y1-y0, 2))*1000/dt
+   # lon0 = mapper.lon(column=x0)
+   # lat0 = mapper.lat(scan=y0)
+   # lon1 = mapper.lon(column=x1)
+   # lat1 = mapper.lat(scan=y1)
+
+    return (x0, y0, x1, y1, ssim_max, r_max)
+
+def run_algorithm(data1, data2, config):
+
+    left = config['left']
+    top = config['top']
+    step = config['step']
+    nx = config['nx']
+    ny = config['ny']
+    sa_cx = config['sa_cx']
+    sa_cy = config['sa_cy']
+    rw_cx = config['rw_cx']
+    rw_cy = config['rw_cy']
+
+    points = [(x, y) for x in range(left, left + step*nx, step) for y in range(top, top + step*ny, step)]
+
+    vectors = []
     
-    # assim = pix_size_km * r_max * 1000 / d_t
-    # v = pix_size_km * np.sqrt(np.power(x1 - x0, 2) + np.power(y1-y0, 2))*1000/d_t
-    
-    # lon0 = mapper.lon(column=x0)
-    # lat0 = mapper.lat(scan=y0)
-    # lon1 = mapper.lon(column=x1)
-    # lat1 = mapper.lat(scan=y1)
-    
-    vectors.append([x0, y0, x1, y1, ssim_max, r_max])
-   
-    
-print(vectors)
+    print(f'Running algorighm with parameters:\n')
+    print(f'sa_cx={sa_cx} sa_cy={sa_cy} rw_cx={rw_cx} rw_cy={rw_cy}')
+    print(f'left={left} top={top} step={step} nx={nx} ny={ny}')
+
+    for point_num, (x0, y0) in enumerate(points):
+        print(f'Processing point  {point_num+1}/{len(points)} : ({x0}, {y0})...')
+        vector = process_point(data1, data2, x0, y0, sa_cx, sa_cy, rw_cx, rw_cy)
+        vectors.append(vector)
+
+    return vectors
 
 
-# Чтение конфига
-from lxml import etree
+# # Чтение конфига
+# from lxml import etree
 
-path_to_config = r'D:\_PROJECTS\_LAB34_2018\vecplotter_pikvic\Debug\config.xml'
+# path_to_config = r'D:\_PROJECTS\_LAB34_2018\vecplotter_pikvic\Debug\config.xml'
 
 
-with open(path_to_config, 'rt') as f:
-    xml = f.read()
+# with open(path_to_config, 'rt') as f:
+#     xml = f.read()
 
-tree = etree.fromstring(xml)
+# tree = etree.fromstring(xml)
 
-sa_cx = int(tree.xpath('/config/sa_cx/text()')[0])
-sa_cy = int(tree.xpath('/config/sa_cy/text()')[0])
+# sa_cx = int(tree.xpath('/config/sa_cx/text()')[0])
+# sa_cy = int(tree.xpath('/config/sa_cy/text()')[0])
 
-iterations = tree.xpath('//iteration')
-for iteration in iterations:
-    rw_cx = int(iteration.xpath('//rw_cx/text()')[0])
-    rw_cy = int(iteration.xpath('//rw_cy/text()')[0])
-    ssim_thr = float(iteration.xpath('//SSIM_thr/text()')[0])
-    assim_thr = float(iteration.xpath('//aSSIM_thr/text()')[0])
-    v_thr = float(iteration.xpath('//v_thr/text()')[0])
-    C_pow = int(iteration.xpath('//C/text()')[0])
-    E_pow = int(iteration.xpath('//E/text()')[0])
-    S_pow = int(iteration.xpath('//S/text()')[0])
+# iterations = tree.xpath('//iteration')
+# for iteration in iterations:
+#     rw_cx = int(iteration.xpath('//rw_cx/text()')[0])
+#     rw_cy = int(iteration.xpath('//rw_cy/text()')[0])
+#     ssim_thr = float(iteration.xpath('//SSIM_thr/text()')[0])
+#     assim_thr = float(iteration.xpath('//aSSIM_thr/text()')[0])
+#     v_thr = float(iteration.xpath('//v_thr/text()')[0])
+#     C_pow = int(iteration.xpath('//C/text()')[0])
+#     E_pow = int(iteration.xpath('//E/text()')[0])
+#     S_pow = int(iteration.xpath('//S/text()')[0])
 
     
-grids = tree.xpath('//grids/regular5')
-for grid in grids:
-    left = int(grid.xpath('//left/text()')[0])
-    top = int(grid.xpath('//top/text()')[0])
-    step = int(grid.xpath('//step/text()')[0])
-    nx = int(grid.xpath('//nX/text()')[0])
-    ny = int(grid.xpath('//nY/text()')[0])
+# grids = tree.xpath('//grids/regular5')
+# for grid in grids:
+#     left = int(grid.xpath('//left/text()')[0])
+#     top = int(grid.xpath('//top/text()')[0])
+#     step = int(grid.xpath('//step/text()')[0])
+#     nx = int(grid.xpath('//nX/text()')[0])
+#     ny = int(grid.xpath('//nY/text()')[0])
