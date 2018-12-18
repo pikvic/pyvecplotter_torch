@@ -183,12 +183,15 @@ def _ssim_matrix(data1, data2, points, config):
 
             ssim_vector[beg:end, :] = ssim_vector_batched
 
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
     return  ssim_vector.cpu().numpy().reshape(len(dataset), dataset.ssim_size_y, dataset.ssim_size_x)
 
 
 def run_algorithm(data1, data2, config):
 
-    #torch.set_num_threads(1)
+    torch.set_num_threads(config['num_threads'])
 
     left = config['left']
     top = config['top']
@@ -219,6 +222,10 @@ def run_algorithm(data1, data2, config):
     #     print(f'Running algorighm with parameters:\n')
     #     print(f'sa_cx={sa_cx} sa_cy={sa_cy} rw_cx={rw_cx} rw_cy={rw_cy}')
     #     print(f'left={left} top={top} step={step} nx={nx} ny={ny}')
+    #     print(f'batch_size={batch_size}')
+    #     if torch.cuda.is_available():
+    #         print(f'Memory allocated: {torch.cuda.memory_allocated() / 1024 ** 2} / {torch.cuda.max_memory_allocated() / 1024 ** 2 }')
+    #         print(f'Memory cached: {torch.cuda.memory_cached() / 1024 ** 2} / {torch.cuda.max_memory_cached() / 1024 ** 2 }')
 
     # print('Ssim 1 to 2...')
     ssim12 = _ssim_matrix(data1, data2, points, config)

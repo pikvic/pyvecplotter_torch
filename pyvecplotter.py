@@ -168,12 +168,14 @@ def get_batch_size(memory_limit_gb, config):
     total_numel = point_numel * npoints
     total_size = point_size * npoints
     memory_limit = memory_limit_gb * 1024 ** 3
-        
+
+    #print(f'Point_size = {point_size} / Total_size = {total_size} / Memory_limit = {memory_limit}')        
     batch_size = memory_limit // point_size
     return batch_size
 
-def run_algorithm(file1=None, file2=None, config_name=None, output_name=None):
+def run_algorithm(file1=None, file2=None, config_name=None, output_name=None, disable_cuda=False, num_threads=4, element_size=8):
 
+    
     b01, data1 = readproj(file1)
     b02, data2 = readproj(file2)
 
@@ -202,7 +204,7 @@ def run_algorithm(file1=None, file2=None, config_name=None, output_name=None):
         'window_radius_x': 10,
         'window_radius_y': 5,
         'element_size': 8,
-        'memory_limit': 3,
+        'memory_limit': 2,
         'device': 'auto',
         'sa_cx': 30, 
         'sa_cy': 30, 
@@ -214,12 +216,17 @@ def run_algorithm(file1=None, file2=None, config_name=None, output_name=None):
     if file_config is not None:
         for key, value in file_config.items():
             config[key] = value
-        
-    config['batch_size'] = get_batch_size(3, config)
+
+    if disable_cuda:
+        config['device'] = 'cpu'
+    config['element_size'] = element_size
+    config['num_threads'] = num_threads
+    config['batch_size'] = get_batch_size(config['memory_limit'], config)
     config['dt'] = calc_dt(b01, b02)
     config['pix_size_km'] = calc_pix_size_km(b01)
     config['mapper'] = mapper
 
+    
     vectors_th_ref = vecthref.run_algorithm(data1, data2, config)
 
    # good_vectors, bad_vectors = filter_vectors(vectors, ssim_lim_lower=ssim_lim_lower, assim_lim_upper=assim_lim_upper)
